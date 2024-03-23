@@ -3,8 +3,8 @@ const mysql = require("mysql");
 
 const connection = mysql.createConnection({
   host: "aws.connect.psdb.cloud",
-  user: "6ulxvzpllu969twmu9c7",
-  password: "pscale_pw_Xkmc4gBSR2OLTMaXkWEQx9eLQQ6677z1EyCCa6Kzx0p",
+  user: "udwlgx5rq4b4n4z3njha",
+  password: "pscale_pw_CQI1rNvop0sP8aZcet01kcR1GHWaAAvnjewT1j91m1t",
   port: 3306,
   database: "pct-project-finals",
   ssl: {
