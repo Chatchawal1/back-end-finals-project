@@ -29,18 +29,10 @@ router.delete("/delete/:id", (req, res) => {
   });
 });
 router.put("/update/:id", (req, res) => {
-  const id = req.params.id;
-  const {
-    username,
-    password,
-    full_name,
-    email,
-    registration_date,
-    last_login,
-    is_admin,
-  } = req.body;
+  const { username, password, full_name, email, registration_date, last_login, is_admin } = req.body;
 
-  const query = `
+// เราสามารถรับค่า date และ timestamp จากฟอร์มได้โดยตรง และใช้ในคำสั่ง SQL ได้ตามปกติ
+const query = `
     UPDATE users
     SET
       username = ?,
@@ -51,29 +43,42 @@ router.put("/update/:id", (req, res) => {
       last_login = ?,
       is_admin = ?
     WHERE id = ?
-  `;
+`;
 
-  db.query(
+db.query(
     query,
-    [
-      username,
-      password,
-      full_name,
-      email,
-      registration_date,
-      last_login,
-      is_admin,
-      id,
-    ],
+    [username, password, full_name, email, registration_date, last_login, is_admin, id],
     (error, results) => {
-      if (error) {
-        console.error("Error updating data in the database:", error);
-        res.status(500).json({ error: "Internal Server Error" });
-        return;
-      }
+        if (error) {
+            console.error("Error updating data in the database:", error);
+            res.status(500).json({ error: "Internal Server Error" });
+            return;
+        }
 
-      res.json({ message: "Updated successfully" });
+        res.json({ message: "Updated successfully" });
     }
-  );
+);
+
 });
+
+router.post("/add", (req, res) => {
+  const { username, password, full_name, email, is_admin } = req.body;
+
+  // Sanitize and validate data as needed
+
+  const query =
+    "INSERT INTO users (username, password, full_name, email, registration_date, is_admin) VALUES (?, ?, ?, ?, NOW(), ?)";
+  const values = [username, password, full_name, email, is_admin];
+
+  db.query(query, values, (err, result) => {
+    if (err) {
+      console.error("Error inserting data:", err);
+      res.status(500).json({ error: "Failed to insert data" });
+    } else {
+      res.status(200).json({ message: "Data inserted successfully" });
+    }
+  });
+});
+
+
 module.exports = router;

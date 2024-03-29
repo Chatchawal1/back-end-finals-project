@@ -3,8 +3,8 @@ const mysql = require("mysql");
 
 const connection = mysql.createConnection({
   host: "aws.connect.psdb.cloud",
-  user: "udwlgx5rq4b4n4z3njha",
-  password: "pscale_pw_CQI1rNvop0sP8aZcet01kcR1GHWaAAvnjewT1j91m1t",
+  user: "ldfegjyya6o9z4os1b1f",
+  password: "pscale_pw_zx8Hi7oIanFaFBqXxRvz6y4deN1Jfb9iWP2VApd2SOh",
   port: 3306,
   database: "pct-project-finals",
   ssl: {
@@ -12,4 +12,5 @@ const connection = mysql.createConnection({
     rejectUnauthorized: true,
   },
 });
+
 module.exports = connection;
