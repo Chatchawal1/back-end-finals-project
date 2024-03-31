@@ -28,11 +28,22 @@ router.delete("/delete/:id", (req, res) => {
     res.json({ message: "Deleted successfully" });
   });
 });
-router.put("/update/:id", (req, res) => {
-  const { username, password, full_name, email, registration_date, last_login, is_admin } = req.body;
 
-// เราสามารถรับค่า date และ timestamp จากฟอร์มได้โดยตรง และใช้ในคำสั่ง SQL ได้ตามปกติ
-const query = `
+router.put("/update/:id", (req, res) => {
+  let {
+    username,
+    password,
+    full_name,
+    email,
+    registration_date,
+    last_login,
+    is_admin,
+  } = req.body;
+
+  // Convert 'is_admin' from 'Admin'/'User' to 1/0
+  is_admin = is_admin === "Admin" ? 1 : 0;
+
+  const query = `
     UPDATE users
     SET
       username = ?,
@@ -43,28 +54,38 @@ const query = `
       last_login = ?,
       is_admin = ?
     WHERE id = ?
-`;
+  `;
 
-db.query(
+  db.query(
     query,
-    [username, password, full_name, email, registration_date, last_login, is_admin, id],
+    [
+      username,
+      password,
+      full_name,
+      email,
+      registration_date,
+      last_login,
+      is_admin,
+      req.params.id,
+    ],
     (error, results) => {
-        if (error) {
-            console.error("Error updating data in the database:", error);
-            res.status(500).json({ error: "Internal Server Error" });
-            return;
-        }
-
-        res.json({ message: "Updated successfully" });
+      if (error) {
+        console.error("Error updating data in the database:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+        return;
+      }
+      // Handle successful update, such as sending a response back
+      res.json({ message: "Updated successfully" });
+      console.log(is_admin);
     }
-);
-
+  );
 });
 
 router.post("/add", (req, res) => {
-  const { username, password, full_name, email, is_admin } = req.body;
+  let { username, password, full_name, email, is_admin } = req.body;
 
   // Sanitize and validate data as needed
+  is_admin = is_admin === "Admin" ? 1 : 0;
 
   const query =
     "INSERT INTO users (username, password, full_name, email, registration_date, is_admin) VALUES (?, ?, ?, ?, NOW(), ?)";
@@ -79,6 +100,5 @@ router.post("/add", (req, res) => {
     }
   });
 });
-
 
 module.exports = router;

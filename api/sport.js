@@ -16,9 +16,8 @@ router.get("/table", (req, res) => {
     res.json(results);
   });
 });
-// Put endpoint แก้ไขข้อมูล
-router.put("/update/:id", (req, res) => {
-  const id = req.params.id;
+
+router.post("/add", (req, res) => {
   const {
     equipment_name,
     quantity_in_stock,
@@ -27,20 +26,50 @@ router.put("/update/:id", (req, res) => {
     note,
   } = req.body;
 
+  const query = `INSERT INTO equipment_sport (equipment_name, quantity_in_stock, equipment_type, import_date, note) VALUES (?, ?, ?, ?, ?)`;
+
+  db.query(
+    query,
+    [equipment_name, quantity_in_stock, equipment_type, import_date, note],
+    (error, results) => {
+      if (error) {
+        console.error("Error inserting data into the database:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+        return;
+      }
+
+      res.json({ message: "Added successfully" });
+    }
+  );
+});
+
+
+// Put endpoint แก้ไขข้อมูล
+router.put("/update/:id", (req, res) => {
+  const id = req.params.id;
+  const {
+    equipment_name,
+    quantity_in_stock,
+    equipment_type,
+    last_update,
+    note,
+  } = req.body;
+
+  console.log(req.body)
   const query = `
     UPDATE equipment_sport
     SET
       equipment_name = ?,
       quantity_in_stock = ?,
       equipment_type = ?,
-      import_date = ?,
+      last_update = ?,
       note = ?
     WHERE id = ?
   `;
 
   db.query(
     query,
-    [equipment_name, quantity_in_stock, equipment_type, import_date, note, id],
+    [equipment_name, quantity_in_stock, equipment_type, last_update, note, id],
     (error, results) => {
       if (error) {
         console.error("Error updating data in the database:", error);

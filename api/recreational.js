@@ -15,6 +15,32 @@ router.get("/table", (req, res) => {
     res.json(results);
   });
 });
+
+router.post("/add", (req, res) => {
+  const {
+    equipment_name,
+    quantity_in_stock,
+    equipment_type,
+    import_date,
+    note,
+  } = req.body;
+  const query = `INSERT INTO equipment_recreational (equipment_name, quantity_in_stock, equipment_type, import_date, note) VALUES (?, ?, ?, ?, ?)`;
+
+  db.query(
+    query,
+    [equipment_name, quantity_in_stock, equipment_type, import_date, note],
+    (error, results) => {
+      if (error) {
+        console.error("Error inserting data into the database:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+        return;
+      }
+
+      res.json({ message: "Added successfully" });
+    }
+  );
+});
+
 router.delete("/delete/:id", (req, res) => {
   const id = req.params.id;
   const query = "DELETE FROM equipment_recreational WHERE ID = ?";
@@ -34,34 +60,25 @@ router.put("/update/:id", (req, res) => {
     equipment_name,
     quantity_in_stock,
     equipment_type,
-    import_date,
     last_update,
     note,
   } = req.body;
 
+  console.log(req.body)
   const query = `
-  UPDATE equipment_recreational
-  SET
-    equipment_name = ?,
-    quantity_in_stock = ?,
-    equipment_type = ?,
-    import_date = ?,
-    last_update = STR_TO_DATE(?, '%Y-%m-%dT%H:%i:%sZ'),
-    note = ?
-  WHERE id = ?
-`;
+    UPDATE equipment_recreational
+    SET
+      equipment_name = ?,
+      quantity_in_stock = ?,
+      equipment_type = ?,
+      last_update = ?,
+      note = ?
+    WHERE id = ?
+  `;
 
   db.query(
     query,
-    [
-      equipment_name,
-      quantity_in_stock,
-      equipment_type,
-      import_date,
-      last_update,
-      note,
-      id,
-    ],
+    [equipment_name, quantity_in_stock, equipment_type, last_update, note, id],
     (error, results) => {
       if (error) {
         console.error("Error updating data in the database:", error);
