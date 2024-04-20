@@ -4,7 +4,7 @@ const db = require("../database/db");
 const router = express.Router();
 
 router.get("/table", (req, res) => {
-  const query = "SELECT * FROM `pct-project-finals`.users";
+  const query = "SELECT * FROM `sql6698503`.users";
 
   db.query(query, (error, results) => {
     if (error) {

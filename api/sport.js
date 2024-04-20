@@ -5,7 +5,7 @@ const router = express.Router();
 
 // GET endpoint เพื่อดึงข้อมูลทั้งหมด
 router.get("/table", (req, res) => {
-  const query = "SELECT * FROM `pct-project-finals`.equipment_sport";
+  const query = "SELECT * FROM `sql6698503`.equipment_sport";
 
   db.query(query, (error, results) => {
     if (error) {
@@ -24,20 +24,20 @@ router.post("/add", (req, res) => {
     equipment_type,
     import_date,
     note,
+    last_update
   } = req.body;
 
-  const query = `INSERT INTO equipment_sport (equipment_name, quantity_in_stock, equipment_type, import_date, note) VALUES (?, ?, ?, ?, ?)`;
+  const query = `INSERT INTO equipment_sport (equipment_name, Sp_quantity_in_stock, equipment_type, import_date, note,last_update) VALUES (?, ?, ?, ?, ?,?)`;
 
   db.query(
     query,
-    [equipment_name, quantity_in_stock, equipment_type, import_date, note],
+    [equipment_name, quantity_in_stock, equipment_type, import_date, note,last_update],
     (error, results) => {
       if (error) {
         console.error("Error inserting data into the database:", error);
         res.status(500).json({ error: "Internal Server Error" });
         return;
       }
-
       res.json({ message: "Added successfully" });
     }
   );
@@ -60,7 +60,7 @@ router.put("/update/:id", (req, res) => {
     UPDATE equipment_sport
     SET
       equipment_name = ?,
-      quantity_in_stock = ?,
+      Sp_quantity_in_stock = ?,
       equipment_type = ?,
       last_update = ?,
       note = ?

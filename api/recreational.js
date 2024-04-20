@@ -4,7 +4,7 @@ const db = require("../database/db");
 const router = express.Router();
 
 router.get("/table", (req, res) => {
-  const query = "SELECT * FROM `pct-project-finals`.equipment_recreational";
+  const query = "SELECT * FROM `sql6698503`.equipment_recreational";
 
   db.query(query, (error, results) => {
     if (error) {
@@ -23,12 +23,13 @@ router.post("/add", (req, res) => {
     equipment_type,
     import_date,
     note,
+    last_update
   } = req.body;
-  const query = `INSERT INTO equipment_recreational (equipment_name, quantity_in_stock, equipment_type, import_date, note) VALUES (?, ?, ?, ?, ?)`;
+  const query = `INSERT INTO equipment_recreational (equipment_name, Eq_quantity_in_stock, equipment_type, import_date, note,last_update) VALUES (?, ?, ?, ?, ?,?)`;
 
   db.query(
     query,
-    [equipment_name, quantity_in_stock, equipment_type, import_date, note],
+    [equipment_name, quantity_in_stock, equipment_type, import_date, note,last_update],
     (error, results) => {
       if (error) {
         console.error("Error inserting data into the database:", error);
@@ -69,7 +70,7 @@ router.put("/update/:id", (req, res) => {
     UPDATE equipment_recreational
     SET
       equipment_name = ?,
-      quantity_in_stock = ?,
+      Eq_quantity_in_stock = ?,
       equipment_type = ?,
       last_update = ?,
       note = ?
