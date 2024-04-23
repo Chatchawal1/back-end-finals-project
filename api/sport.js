@@ -5,7 +5,7 @@ const router = express.Router();
 
 // GET endpoint เพื่อดึงข้อมูลทั้งหมด
 router.get("/table", (req, res) => {
-  const query = "SELECT * FROM `sql6698503`.equipment_sport";
+  const query = "SELECT * FROM `pctdb`.equipment_sport";
 
   db.query(query, (error, results) => {
     if (error) {

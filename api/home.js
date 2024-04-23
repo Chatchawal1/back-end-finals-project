@@ -50,7 +50,7 @@ router.get("/UserCount", (req, res) => {
 }); //จำนวนผู้ใช้ทั้งหมด
 router.get("/returnedCount", (req, res) => {
   const query =
-    "SELECT COUNT(*) AS returnedCount FROM loan_details WHERE loan_status = 'Returned'";
+    "SELECT COUNT(*) AS returnedCount FROM loan_details WHERE loan_status = 'คืน'";
 
   db.query(query, (error, results) => {
     if (error) {
@@ -65,7 +65,7 @@ router.get("/returnedCount", (req, res) => {
 }); //จำนวนผู้ยืมอุปกรณ์ทั้งหมด
 router.get("/totalLend", (req, res) => {
   const query =
-    "SELECT COUNT(*) AS totalLend FROM loan_details WHERE loan_status = 'Borrowed'";
+    "SELECT COUNT(*) AS totalLend FROM loan_details WHERE loan_status = 'ยืม'";
 
   db.query(query, (error, results) => {
     if (error) {
@@ -81,7 +81,7 @@ router.get("/totalLend", (req, res) => {
 
 
 router.get("/management", (req, res) => {
-  const query = "SELECT * FROM `sql6698503`.loan_details;";
+  const query = "SELECT * FROM `pctdb`.loan_details;";
 
   db.query(query, (error, results) => {
     if (error) {
@@ -93,81 +93,44 @@ router.get("/management", (req, res) => {
   });
 });
 
-router.get("/getStock", (req, res) => {
-  // Query for loan details
-    const equipmentQuery = `
-    SELECT 
-    u.quantity_in_stock,
-    u.equipment_type,
-    u.equipment_name
-FROM (
-    SELECT 
-        MAX(Eq_quantity_in_stock) AS quantity_in_stock,
-        equipment_name,
-        'Recreational' AS equipment_type
-    FROM equipment_recreational
-    GROUP BY equipment_name
+router.get("/eqloan", (req, res) => {
+  const query = `
+  SELECT 
+    es.equipment_name AS equipment_name, 
+    'อุปกรณ์กีฬา' AS equipment_type, 
+    MAX(es.Sp_quantity_in_stock) AS max_quantity_in_stock,
+    SUM(CASE WHEN ld.loan_status = 'ยืม' THEN ld.quantity_borrowed ELSE 0 END) AS total_quantity_borrowed,
+    MAX(es.Sp_quantity_in_stock) > 0 AS is_available
+  FROM equipment_sport es
+  LEFT JOIN loan_details ld ON es.equipment_name = ld.equipment_name AND ld.loan_status = 'ยืม'
+  GROUP BY es.equipment_name
+  
+  UNION
+  
+  SELECT 
+    er.equipment_name AS equipment_name, 
+    'อุปกรณ์นันทนาการ' AS equipment_type, 
+    MAX(er.Eq_quantity_in_stock) AS max_quantity_in_stock,
+    SUM(CASE WHEN ld.loan_status = 'ยืม' THEN ld.quantity_borrowed ELSE 0 END) AS total_quantity_borrowed,
+    MAX(er.Eq_quantity_in_stock) > 0 AS is_available
+  FROM equipment_recreational er
+  LEFT JOIN loan_details ld ON er.equipment_name = ld.equipment_name AND ld.loan_status = 'ยืม'
+  GROUP BY er.equipment_name;
+`;
 
-    UNION
+// Rest of the code remains the same...
 
-    SELECT 
-        MAX(Sp_quantity_in_stock) AS quantity_in_stock,
-        equipment_name,
-        'Sport' AS equipment_type
-    FROM equipment_sport
-    GROUP BY equipment_name
-) AS u
-JOIN \`sql6698503\`.loan_details AS ld
-ON u.equipment_name = ld.equipment_name
-GROUP BY u.equipment_name, u.equipment_type, u.quantity_in_stock;
-    `;
 
-    db.query(equipmentQuery, (error,results) => {
-      if (error) {
-        console.error("Error querying equipment from database:", error);
-        res.status(500).json({ error: "Internal Server Error" });
-        return;
-      }
-      // Send both results back in the response
-      res.json(
-        results
-      );
-    });
-});
-router.get("/getEtype/:equipmentName", (req, res) => {
-  const { equipmentName } = req.params;
-
-  // Query in recreational equipment
-  let query = `SELECT 'Recreational' AS equipment_type FROM equipment_recreational WHERE equipment_name = ?`;
-  db.query(query, [equipmentName], (error, results) => {
+  db.query(query, (error, results) => {
     if (error) {
-      console.error("Error querying database:", error);
+      console.error("Error querying equipment summary from database:", error);
       res.status(500).json({ error: "Internal Server Error" });
-      return;
-    }
-
-    if (results.length > 0) {
-      return res.json(results[0]);
     } else {
-      // Query in sport equipment if no result in recreational
-      query = `SELECT 'Sport' AS equipment_type FROM equipment_sport WHERE equipment_name = ?`;
-      db.query(query, [equipmentName], (error, results) => {
-        if (error) {
-          console.error("Error querying database:", error);
-          res.status(500).json({ error: "Internal Server Error" });
-          return;
-        }
-
-        if (results.length > 0) {
-          return res.json(results[0]);
-        } else {
-          // If no matches found in both tables
-          res.status(404).json({ message: "Equipment not found" });
-        }
-      });
+      res.json(results);
     }
   });
 });
+
 
 
 

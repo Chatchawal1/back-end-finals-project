@@ -4,7 +4,7 @@ const db = require("../database/db");
 const router = express.Router();
 
 router.get("/table", (req, res) => {
-  const query = "SELECT * FROM `sql6698503`.users";
+  const query = "SELECT * FROM `pctdb`.users";
 
   db.query(query, (error, results) => {
     if (error) {
@@ -88,7 +88,7 @@ router.post("/add", (req, res) => {
   is_admin = is_admin === "Admin" ? 1 : 0;
 
   const query =
-    "INSERT INTO users (username, password, full_name, email, registration_date, is_admin) VALUES (?, ?, ?, ?, NOW(), ?)";
+    "INSERT INTO users (username, password, full_name, email,last_update, registration_date, is_admin) VALUES (?, ?, ?, ?,NOW(), NOW(), ?)";
   const values = [username, password, full_name, email, is_admin];
 
   db.query(query, values, (err, result) => {
