@@ -1,7 +1,118 @@
 const express = require("express");
 const db = require("../database/db");
+const cors = require("cors");
 
 const router = express.Router();
+
+router.use(cors());
+
+router.put("/return", (req, res) => {
+  const { id, equipment_name, quantity_borrowed } = req.body;
+
+  // Start a database transaction
+  db.beginTransaction((err) => {
+    if (err) {
+      console.error("Error starting transaction:", err);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+
+    // Step 1: Update the loan_details to mark the item as returned
+    const updateLoanDetailsQuery = `
+    UPDATE loan_details
+    SET loan_status = 'คืน'
+    WHERE id = ? AND equipment_name = ? AND loan_status = 'ยืม';
+        `;
+
+    db.query(updateLoanDetailsQuery, [id, equipment_name], (error, results) => {
+      if (error) {
+        return db.rollback(() => {
+          console.error("Error updating loan_details:", error);
+          res.status(500).json({ error: "Internal Server Error" });
+        });
+      }
+
+      // Check if any rows were affected (means update was successful)
+      if (results.affectedRows === 0) {
+        return db.rollback(() => {
+          res.status(404).json({
+            message:
+              "No active loan found with provided ID and equipment name, or item is already returned.",
+          });
+        });
+      }
+
+      // Step 2: Decrease quantity in equipment_recreational
+      const updateRecreationalQuery = `
+        UPDATE equipment_recreational
+        SET  Eq_quantity_in_stock = Eq_quantity_in_stock + ?
+        WHERE equipment_name = ?
+      `;
+      db.query(
+        updateRecreationalQuery,
+        [quantity_borrowed, equipment_name],
+        (error, results) => {
+          if (error) {
+            return db.rollback(() => {
+              console.error("Error updating equipment_recreational:", error);
+              res.status(500).json({ error: "Internal Server Error" });
+            });
+          }
+          const updateSportQuery = `
+          UPDATE equipment_sport
+          SET Sp_quantity_in_stock = Sp_quantity_in_stock + ?
+          WHERE equipment_name = ? 
+        `;
+
+          db.query(
+            updateSportQuery,
+            [quantity_borrowed, equipment_name],
+            (error, results) => {
+              if (error) {
+                return db.rollback(() => {
+                  console.error("Error updating equipment_sport:", error);
+                  res.status(500).json({ error: "Internal Server Error" });
+                });
+              }
+            }
+          );
+
+          const updateBorrowedQuery = `
+                UPDATE loan_details
+                SET quantity_borrowed = quantity_borrowed - ?
+                WHERE equipment_name = ? AND id = ?
+              `;
+
+          db.query(
+            updateBorrowedQuery,
+            [quantity_borrowed, equipment_name, id],
+            (error, results) => {
+              if (error) {
+                return db.rollback(() => {
+                  console.error("Error updating equipment_sport:", error);
+                  res.status(500).json({ error: "Internal Server Error" });
+                });
+              }
+            }
+          );
+
+          // Commit the transaction if all updates succeed
+          db.commit((err) => {
+            if (err) {
+              return db.rollback(() => {
+                console.error("Error committing transaction:", err);
+                res.status(500).json({ error: "Internal Server Error" });
+              });
+            }
+            res.status(200).json({
+              message: "Item returned successfully and stock updated",
+              details: results,
+            });
+          });
+        }
+      );
+    });
+  });
+});
 
 router.post("/borrow", (req, res) => {
   const {
@@ -12,18 +123,19 @@ router.post("/borrow", (req, res) => {
     borrow_date,
     return_date,
     loan_status,
+    id,
   } = req.body;
 
   // Start a database transaction
-  db.beginTransaction(err => {
+  db.beginTransaction((err) => {
     if (err) {
       console.error("Error starting transaction:", err);
       return res.status(500).json({ error: "Internal Server Error" });
     }
-
     // Step 1: Insert into loan_details
     const insertQuery = `
       INSERT INTO loan_details (
+        id,
         equipment_name,
         equipment_type,
         quantity_borrowed,
@@ -31,12 +143,13 @@ router.post("/borrow", (req, res) => {
         borrow_date,
         return_date,
         loan_status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?,?, ?, ?, ?, ?, ?, ?)
     `;
 
     db.query(
       insertQuery,
       [
+        id,
         equipment_name,
         equipment_type,
         quantity_borrowed,
@@ -60,48 +173,56 @@ router.post("/borrow", (req, res) => {
           WHERE equipment_name = ?
         `;
 
-        db.query(updateRecreationalQuery, [quantity_borrowed, equipment_name], (error, results) => {
-          if (error) {
-            return db.rollback(() => {
-              console.error("Error updating equipment_recreational:", error);
-              res.status(500).json({ error: "Internal Server Error" });
-            });
-          }
+        db.query(
+          updateRecreationalQuery,
+          [quantity_borrowed, equipment_name],
+          (error, results) => {
+            if (error) {
+              return db.rollback(() => {
+                console.error("Error updating equipment_recreational:", error);
+                res.status(500).json({ error: "Internal Server Error" });
+              });
+            }
 
-          // Step 3: Decrease quantity in equipment_sport
-          const updateSportQuery = `
+            // Step 3: Decrease quantity in equipment_sport
+            const updateSportQuery = `
             UPDATE equipment_sport
             SET Sp_quantity_in_stock = Sp_quantity_in_stock - ?
             WHERE equipment_name = ?
           `;
 
-          db.query(updateSportQuery, [quantity_borrowed, equipment_name], (error, results) => {
-            if (error) {
-              return db.rollback(() => {
-                console.error("Error updating equipment_sport:", error);
-                res.status(500).json({ error: "Internal Server Error" });
-              });
-            }
+            db.query(
+              updateSportQuery,
+              [quantity_borrowed, equipment_name],
+              (error, results) => {
+                if (error) {
+                  return db.rollback(() => {
+                    console.error("Error updating equipment_sport:", error);
+                    res.status(500).json({ error: "Internal Server Error" });
+                  });
+                }
 
-            // Commit the transaction
-            db.commit(err => {
-              if (err) {
-                return db.rollback(() => {
-                  console.error("Error committing transaction:", err);
-                  res.status(500).json({ error: "Internal Server Error" });
+                // Commit the transaction
+                db.commit((err) => {
+                  if (err) {
+                    return db.rollback(() => {
+                      console.error("Error committing transaction:", err);
+                      res.status(500).json({ error: "Internal Server Error" });
+                    });
+                  }
+                  res.status(201).json({
+                    message:
+                      "Borrowing record created and stock updated successfully",
+                    borrowingId: results.insertId,
+                  });
                 });
               }
-              res.status(201).json({
-                message: "Borrowing record created and stock updated successfully",
-                borrowingId: results.insertId,
-              });
-            });
-          });
-        });
+            );
+          }
+        );
       }
     );
   });
 });
 
 module.exports = router;
-
