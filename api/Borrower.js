@@ -132,6 +132,7 @@ router.post("/borrow", (req, res) => {
       console.error("Error starting transaction:", err);
       return res.status(500).json({ error: "Internal Server Error" });
     }
+
     // Step 1: Insert into loan_details
     const insertQuery = `
       INSERT INTO loan_details (
@@ -142,10 +143,12 @@ router.post("/borrow", (req, res) => {
         borrower_name,
         borrow_date,
         return_date,
-        loan_status
-      ) VALUES (?,?, ?, ?, ?, ?, ?, ?)
+        loan_status,
+        quantity_data
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
+    // Execute the insert query
     db.query(
       insertQuery,
       [
@@ -157,21 +160,25 @@ router.post("/borrow", (req, res) => {
         borrow_date,
         return_date,
         loan_status,
+        quantity_borrowed, // Initial quantity_data is set to quantity_borrowed
       ],
-      (error, results) => {
-        if (error) {
+      (insertError, insertResults) => {
+        if (insertError) {
           return db.rollback(() => {
-            console.error("Error when inserting borrowing record:", error);
+            console.error(
+              "Error when inserting borrowing record:",
+              insertError
+            );
             res.status(500).json({ error: "Internal Server Error" });
           });
         }
 
         // Step 2: Decrease quantity in equipment_recreational
         const updateRecreationalQuery = `
-          UPDATE equipment_recreational
-          SET  Eq_quantity_in_stock = Eq_quantity_in_stock - ?
-          WHERE equipment_name = ?
-        `;
+       UPDATE equipment_recreational
+       SET  Eq_quantity_in_stock = Eq_quantity_in_stock - ?
+       WHERE equipment_name = ?
+     `;
 
         db.query(
           updateRecreationalQuery,
@@ -186,10 +193,10 @@ router.post("/borrow", (req, res) => {
 
             // Step 3: Decrease quantity in equipment_sport
             const updateSportQuery = `
-            UPDATE equipment_sport
-            SET Sp_quantity_in_stock = Sp_quantity_in_stock - ?
-            WHERE equipment_name = ?
-          `;
+         UPDATE equipment_sport
+         SET Sp_quantity_in_stock = Sp_quantity_in_stock - ?
+         WHERE equipment_name = ?
+       `;
 
             db.query(
               updateSportQuery,
@@ -202,20 +209,80 @@ router.post("/borrow", (req, res) => {
                   });
                 }
 
-                // Commit the transaction
-                db.commit((err) => {
-                  if (err) {
-                    return db.rollback(() => {
-                      console.error("Error committing transaction:", err);
-                      res.status(500).json({ error: "Internal Server Error" });
-                    });
+                // Step 4: Calculate and update the quantity_data for the equipment
+                const sumQuantityQuery = `
+                SELECT SUM(quantity_data) AS total
+                FROM loan_details
+                WHERE equipment_name = ? ;
+      `;
+
+                // Execute the sum query
+                db.query(
+                  sumQuantityQuery,
+                  [equipment_name],
+                  (sumError, sumResults) => {
+                    if (sumError) {
+                      return db.rollback(() => {
+                        console.error(
+                          "Error summing quantity_borrowed:",
+                          sumError
+                        );
+                        res
+                          .status(500)
+                          .json({ error: "Internal Server Error" });
+                      });
+                    }
+
+                    // Get the total quantity borrowed
+                    const totalQuantityBorrowed = sumResults[0].total;
+                    const updateQuantityDataQuery = `
+          UPDATE loan_details
+          SET quantity_data = ?
+          WHERE equipment_name = ? ;
+        `;
+
+                    // Execute the update query
+                    db.query(
+                      updateQuantityDataQuery,
+                      [totalQuantityBorrowed, equipment_name],
+                      (updateError, updateResults) => {
+                        if (updateError) {
+                          return db.rollback(() => {
+                            console.error(
+                              "Error updating quantity_data:",
+                              updateError
+                            );
+                            res
+                              .status(500)
+                              .json({ error: "Internal Server Error" });
+                          });
+                        }
+
+                        // Commit the transaction if everything is successful
+                        db.commit((commitErr) => {
+                          if (commitErr) {
+                            return db.rollback(() => {
+                              console.error(
+                                "Error committing transaction:",
+                                commitErr
+                              );
+                              res
+                                .status(500)
+                                .json({ error: "Internal Server Error" });
+                            });
+                          }
+
+                          // Respond to the client with success message
+                          res.status(201).json({
+                            message:
+                              "Borrowing record created and stock updated successfully",
+                            borrowingId: insertResults.insertId,
+                          });
+                        });
+                      }
+                    );
                   }
-                  res.status(201).json({
-                    message:
-                      "Borrowing record created and stock updated successfully",
-                    borrowingId: results.insertId,
-                  });
-                });
+                );
               }
             );
           }

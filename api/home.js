@@ -81,7 +81,19 @@ router.get("/totalLend", (req, res) => {
 
 
 router.get("/management", (req, res) => {
-  const query = "SELECT * FROM `pctdb`.loan_details;";
+  const query = `
+  SELECT 
+  ld.*,
+  CASE
+    WHEN es.equipment_name IS NOT NULL THEN es.Sp_quantity_in_stock
+    WHEN er.equipment_name IS NOT NULL THEN er.Eq_quantity_in_stock
+    ELSE 0
+  END AS total_stock
+FROM pctdb.loan_details ld
+LEFT JOIN pctdb.equipment_sport es ON ld.equipment_name = es.equipment_name
+LEFT JOIN pctdb.equipment_recreational er ON ld.equipment_name = er.equipment_name
+ORDER BY ld.equipment_name;
+  `;
 
   db.query(query, (error, results) => {
     if (error) {
@@ -92,6 +104,7 @@ router.get("/management", (req, res) => {
     res.json(results);
   });
 });
+
 
 router.get("/eqloan", (req, res) => {
   const query = `
@@ -104,7 +117,7 @@ router.get("/eqloan", (req, res) => {
   FROM equipment_sport es
   LEFT JOIN loan_details ld ON es.equipment_name = ld.equipment_name AND ld.loan_status = 'ยืม'
   GROUP BY es.equipment_name
-  
+
   UNION
   
   SELECT 
@@ -117,9 +130,6 @@ router.get("/eqloan", (req, res) => {
   LEFT JOIN loan_details ld ON er.equipment_name = ld.equipment_name AND ld.loan_status = 'ยืม'
   GROUP BY er.equipment_name;
 `;
-
-// Rest of the code remains the same...
-
 
   db.query(query, (error, results) => {
     if (error) {
