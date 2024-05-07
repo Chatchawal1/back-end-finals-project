@@ -292,4 +292,32 @@ router.post("/borrow", (req, res) => {
   });
 });
 
+router.put("/adminsubmit",(req,res)=>{
+
+  const equipment_name = req.params.equipment_name;
+
+  const updateStatus = `
+  UPDATE loan_details
+  SET loan_status = "ยืม"
+  WHERE equipment_name = ?
+`;
+
+db.query(
+  updateStatus,
+  [equipment_name],
+  (updateError, updateStatus) => {
+    if (updateError) {
+      return db.rollback(() => {
+        console.error(
+          "Error updating loan_status:",
+          updateError
+        );
+        res
+          .status(500)
+          .json({ error: "Internal Server Error" });
+      });
+    }
+  })
+})
+
 module.exports = router;
