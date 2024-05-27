@@ -292,32 +292,24 @@ router.post("/borrow", (req, res) => {
   });
 });
 
-router.put("/adminsubmit",(req,res)=>{
-
+router.put("/adminsubmit/:equipment_name/:id", (req, res) => {
   const equipment_name = req.params.equipment_name;
+  const id = req.params.id;
 
   const updateStatus = `
-  UPDATE loan_details
-  SET loan_status = "ยืม"
-  WHERE equipment_name = ?
-`;
+    UPDATE loan_details
+    SET loan_status = 'ยืม'
+    WHERE equipment_name = ? AND id = ?
+  `;
 
-db.query(
-  updateStatus,
-  [equipment_name],
-  (updateError, updateStatus) => {
+  db.query(updateStatus, [equipment_name, id], (updateError, updateResults) => {
     if (updateError) {
-      return db.rollback(() => {
-        console.error(
-          "Error updating loan_status:",
-          updateError
-        );
-        res
-          .status(500)
-          .json({ error: "Internal Server Error" });
-      });
+      console.error("Error updating loan_status:", updateError);
+      return res.status(500).json({ error: "Internal Server Error" });
     }
-  })
-})
+
+    res.status(200).json({ message: "Loan status updated successfully." });
+  });
+});
 
 module.exports = router;
