@@ -55,6 +55,7 @@ router.delete("/delete/:id", (req, res) => {
     res.json({ message: "Deleted successfully" });
   });
 });
+
 router.put("/update/:id", (req, res) => {
   const id = req.params.id;
   const {
