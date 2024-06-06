@@ -302,12 +302,14 @@ router.put("/adminsubmit/:equipment_name/:id", (req, res) => {
     WHERE equipment_name = ? AND id = ?
   `;
 
+  console.log(equipment_name,id)
   db.query(updateStatus, [equipment_name, id], (updateError, updateResults) => {
     if (updateError) {
       console.error("Error updating loan_status:", updateError);
       return res.status(500).json({ error: "Internal Server Error" });
     }
 
+    console.log("update?");
     res.status(200).json({ message: "Loan status updated successfully." });
   });
 });
