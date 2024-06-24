@@ -18,4 +18,12 @@ app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
-module.exports.handler = serverless(app);
+// index.js
+module.exports = (req, res) => {
+  try {
+      res.status(200).send('Hello, world!');
+  } catch (error) {
+      console.error('Error:', error);
+      res.status(500).send('Internal Server Error');
+  }
+};
