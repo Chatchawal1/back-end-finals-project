@@ -2,6 +2,7 @@
 const express = require("express");
 const routes = require("./database/routes");
 const cors = require("cors");
+const serverless = require('serverless-http')
 // const dotenv = require("dotenv");
 
 // dotenv.config(); // โหลดค่า environment variables จากไฟล์ .env
@@ -16,3 +17,5 @@ app.use("/api", routes);
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
+module.exports.handler = serverless(app);
