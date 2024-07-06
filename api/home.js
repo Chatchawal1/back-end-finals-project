@@ -84,13 +84,13 @@ router.get("/management", (req, res) => {
   const query = `
 SELECT 
     ld.*,
-    COALESCE(es.Sp_quantity_in_stock, er.Eq_quantity_in_stock) AS total_stock
+    COALESCE(combined.quantity_in_stock) AS total_stock
 FROM pctdb.loan_details ld
 LEFT JOIN (
-    SELECT equipment_name, Sp_quantity_in_stock
+    SELECT equipment_name, Sp_quantity_in_stock AS quantity_in_stock
     FROM pctdb.equipment_sport
     UNION ALL
-    SELECT equipment_name, Eq_quantity_in_stock
+    SELECT equipment_name, Eq_quantity_in_stock AS quantity_in_stock
     FROM pctdb.equipment_recreational
 ) combined ON ld.equipment_name = combined.equipment_name
 ORDER BY ld.equipment_name;
