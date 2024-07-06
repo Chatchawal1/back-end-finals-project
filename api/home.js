@@ -82,16 +82,17 @@ router.get("/totalLend", (req, res) => {
 
 router.get("/management", (req, res) => {
   const query = `
-  SELECT 
-  ld.*,
-  CASE
-    WHEN es.equipment_name IS NOT NULL THEN es.Sp_quantity_in_stock
-    WHEN er.equipment_name IS NOT NULL THEN er.Eq_quantity_in_stock
-    ELSE 0
-  END AS total_stock
+SELECT 
+    ld.*,
+    COALESCE(es.Sp_quantity_in_stock, er.Eq_quantity_in_stock) AS total_stock
 FROM pctdb.loan_details ld
-LEFT JOIN pctdb.equipment_sport es ON ld.equipment_name = es.equipment_name
-LEFT JOIN pctdb.equipment_recreational er ON ld.equipment_name = er.equipment_name
+LEFT JOIN (
+    SELECT equipment_name, Sp_quantity_in_stock
+    FROM pctdb.equipment_sport
+    UNION ALL
+    SELECT equipment_name, Eq_quantity_in_stock
+    FROM pctdb.equipment_recreational
+) combined ON ld.equipment_name = combined.equipment_name
 ORDER BY ld.equipment_name;
   `;
 
