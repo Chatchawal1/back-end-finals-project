@@ -214,8 +214,6 @@ router.put("/adminsubmit/:equipment_name/:id", (req, res) => {
   const id = req.params.id;
   const { quantity_borrowed } = req.body;
 
-  console.log("Quantity borrowed:", quantity_borrowed);
-
   // Validate quantity_borrowed
   if (isNaN(quantity_borrowed) || quantity_borrowed <= 0) {
     return res.status(400).json({ error: "Invalid quantity borrowed" });
@@ -261,10 +259,6 @@ router.put("/adminsubmit/:equipment_name/:id", (req, res) => {
       const newQuantityData = parseInt(currentQuantityData, 10);
       const newStock = current_stock - newQuantityData;
 
-      console.log("Current quantity data:", currentQuantityData);
-      console.log("Current stock:", current_stock);
-      console.log("New quantity data:", newQuantityData);
-      console.log("New stock:", newStock);
 
       if (newStock < 0) {
         return db.rollback(() => {
