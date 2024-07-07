@@ -259,7 +259,7 @@ router.put("/adminsubmit/:equipment_name/:id", (req, res) => {
       const newQuantityData = parseInt(currentQuantityData, 10);
       const newStock = current_stock - newQuantityData;
 
-      console.log(newQuantityData,newStock);
+      console.log(currentQuantityData,newStock);
       if (newStock < 0) {
         return db.rollback(() => {
           console.error("Insufficient stock");
