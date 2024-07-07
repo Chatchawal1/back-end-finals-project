@@ -120,6 +120,7 @@ router.post("/borrow", (req, res) => {
     equipment_type,
     quantity_borrowed,
     borrower_name,
+    identifier_number, 
     borrow_date,
     return_date,
     loan_status,
@@ -141,11 +142,12 @@ router.post("/borrow", (req, res) => {
         equipment_type,
         quantity_borrowed,
         borrower_name,
+        identifier_number, 
         borrow_date,
         return_date,
         loan_status,
         quantity_data
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     // Execute the insert query
@@ -157,6 +159,7 @@ router.post("/borrow", (req, res) => {
         equipment_type,
         quantity_borrowed,
         borrower_name,
+        identifier_number, 
         borrow_date,
         return_date,
         loan_status,
