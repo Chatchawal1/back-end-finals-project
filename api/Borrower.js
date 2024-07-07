@@ -151,6 +151,8 @@ router.post("/borrow", (req, res) => {
       const total_quantity = sumResults[0].total_quantity;
       const new_quantity_data = total_quantity + parseInt(quantity_borrowed, 10);
 
+      console.log(total_quantity,new_quantity_data,quantity_borrowed);
+
       // Step 2: Insert into loan_details
       const insertQuery = `
         INSERT INTO loan_details (
