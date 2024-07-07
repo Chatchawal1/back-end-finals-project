@@ -149,7 +149,7 @@ LIMIT 1
         });
       }
 
-      const total_quantity = sumResults[0].total_quantity;
+      const total_quantity = sumResults;
       const new_quantity_data = total_quantity + parseInt(quantity_borrowed, 10);
 
       console.log(total_quantity,new_quantity_data,quantity_borrowed);
