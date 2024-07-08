@@ -138,7 +138,7 @@ router.post("/borrow", (req, res) => {
     const sumQuery = `
       SELECT COALESCE((quantity_data), 0) as total_quantity
       FROM loan_details
-      WHERE equipment_name = ? AND loan_status != 'คืนแล้ว'
+      WHERE equipment_name = ? AND loan_status != 'คืน'
 LIMIT 1
     `;
 
