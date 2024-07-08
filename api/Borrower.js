@@ -120,6 +120,7 @@ router.post("/borrow", (req, res) => {
     equipment_type,
     quantity_borrowed,
     borrower_name,
+    identifier_number,  
     borrow_date,
     return_date,
     loan_status,
@@ -135,10 +136,9 @@ router.post("/borrow", (req, res) => {
 
     // Step 1: Calculate sum of quantity_data for the equipment
     const sumQuery = `
-      SELECT COALESCE((quantity_data), 0) as total_quantity
+      SELECT COALESCE(SUM(quantity_data), 0) as total_quantity
       FROM loan_details
       WHERE equipment_name = ? AND loan_status != 'คืนแล้ว'
-LIMIT 1
     `;
 
     db.query(sumQuery, [equipment_name], (sumError, sumResults) => {
@@ -149,7 +149,7 @@ LIMIT 1
         });
       }
 
-      const total_quantity = sumResults;
+      const total_quantity = sumResults[0].total_quantity;
       const new_quantity_data = total_quantity + parseInt(quantity_borrowed, 10);
 
       // Step 2: Insert into loan_details
@@ -160,11 +160,12 @@ LIMIT 1
           equipment_type,
           quantity_borrowed,
           borrower_name,
+          identifier_number,  
           borrow_date,
           return_date,
           loan_status,
           quantity_data
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
       `;
 
       // Execute the insert query
@@ -176,6 +177,7 @@ LIMIT 1
           equipment_type,
           quantity_borrowed,
           borrower_name,
+          identifier_number,  
           borrow_date,
           return_date,
           loan_status,
@@ -189,25 +191,25 @@ LIMIT 1
             });
           }
 
-        // Commit the transaction if everything is successful
-        db.commit((commitErr) => {
-          if (commitErr) {
-            return db.rollback(() => {
-              console.error("Error committing transaction:", commitErr);
-              res.status(500).json({ error: "Internal Server Error" });
-            });
-          }
+          // Commit the transaction if everything is successful
+          db.commit((commitErr) => {
+            if (commitErr) {
+              return db.rollback(() => {
+                console.error("Error committing transaction:", commitErr);
+                res.status(500).json({ error: "Internal Server Error" });
+              });
+            }
 
-          // Respond to the client with success message
-          res.status(201).json({
-            message: "Borrowing record created successfully",
-            borrowingId: insertResults.insertId,
+            // Respond to the client with success message
+            res.status(201).json({
+              message: "Borrowing record created successfully",
+              borrowingId: insertResults.insertId,
+            });
           });
-        });
-      }
-    );
+        }
+      );
+    });
   });
-});
 });
 
 router.put("/adminsubmit/:equipment_name/:id", (req, res) => {
