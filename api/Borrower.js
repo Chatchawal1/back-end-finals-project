@@ -139,6 +139,7 @@ router.post("/borrow", (req, res) => {
       SELECT COALESCE(SUM(quantity_data), 0) as total_quantity
       FROM loan_details
       WHERE equipment_name = ? AND loan_status != 'คืนแล้ว'
+LIMIT 1
     `;
 
     db.query(sumQuery, [equipment_name], (sumError, sumResults) => {
@@ -149,7 +150,7 @@ router.post("/borrow", (req, res) => {
         });
       }
 
-      const total_quantity = sumResults[0].total_quantity;
+      const total_quantity = sumResults;
       const new_quantity_data = total_quantity + parseInt(quantity_borrowed, 10);
 
       // Step 2: Insert into loan_details
