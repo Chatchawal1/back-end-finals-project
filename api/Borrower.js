@@ -120,7 +120,6 @@ router.post("/borrow", (req, res) => {
     equipment_type,
     quantity_borrowed,
     borrower_name,
-    identifier_number, 
     borrow_date,
     return_date,
     loan_status,
@@ -134,46 +133,6 @@ router.post("/borrow", (req, res) => {
       return res.status(500).json({ error: "Internal Server Error" });
     }
 
-<<<<<<< HEAD
-    // Step 1: Insert into loan_details
-    const insertQuery = `
-      INSERT INTO loan_details (
-        id,
-        equipment_name,
-        equipment_type,
-        quantity_borrowed,
-        borrower_name,
-        identifier_number, 
-        borrow_date,
-        return_date,
-        loan_status,
-        quantity_data
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
-    // Execute the insert query
-    db.query(
-      insertQuery,
-      [
-        id,
-        equipment_name,
-        equipment_type,
-        quantity_borrowed,
-        borrower_name,
-        identifier_number, 
-        borrow_date,
-        return_date,
-        loan_status,
-        0, // Initial quantity_data is set to 0
-      ],
-      (insertError, insertResults) => {
-        if (insertError) {
-          return db.rollback(() => {
-            console.error("Error when inserting borrowing record:", insertError);
-            res.status(500).json({ error: "Internal Server Error" });
-          });
-        }
-=======
     // Step 1: Calculate sum of quantity_data for the equipment
     const sumQuery = `
       SELECT COALESCE((quantity_data), 0) as total_quantity
@@ -229,7 +188,6 @@ LIMIT 1
               res.status(500).json({ error: "Internal Server Error" });
             });
           }
->>>>>>> 069348dad31a40dd9a3b9f200ebbd3033dacbd10
 
         // Commit the transaction if everything is successful
         db.commit((commitErr) => {
