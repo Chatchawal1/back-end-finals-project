@@ -136,7 +136,7 @@ router.post("/borrow", (req, res) => {
 
     // Step 1: Calculate sum of quantity_data for the equipment
     const sumQuery = `
-      SELECT COALESCE(SUM(quantity_data), 0) as total_quantity
+      SELECT COALESCE((quantity_data), 0) as total_quantity
       FROM loan_details
       WHERE equipment_name = ? AND loan_status != 'คืนแล้ว'
 LIMIT 1
