@@ -37,11 +37,13 @@ router.put("/update/:id", (req, res) => {
     email,
     registration_date,
     last_login,
+    cellNum,
     is_admin,
   } = req.body;
 
   // Convert 'is_admin' from 'Admin'/'User' to 1/0
   is_admin = is_admin === "Admin" ? 1 : 0;
+
 
   const query = `
     UPDATE users
@@ -50,6 +52,7 @@ router.put("/update/:id", (req, res) => {
       password = ?,
       full_name = ?,
       email = ?,
+      cellNum = ?,
       registration_date = ?,
       last_login = ?,
       is_admin = ?
@@ -63,6 +66,7 @@ router.put("/update/:id", (req, res) => {
       password,
       full_name,
       email,
+      cellNum,
       registration_date,
       last_login,
       is_admin,
@@ -77,19 +81,20 @@ router.put("/update/:id", (req, res) => {
       // Handle successful update, such as sending a response back
       res.json({ message: "Updated successfully" });
       console.log(is_admin);
+      console.log(req.body);
     }
   );
 });
 
 router.post("/add", (req, res) => {
-  let { username, password, full_name, email, is_admin } = req.body;
+  let { username, password, full_name, email, is_admin,cellNum } = req.body;
 
   // Sanitize and validate data as needed
   is_admin = is_admin === "Admin" ? 1 : 0;
 
   const query =
-    "INSERT INTO users (username, password, full_name, email,last_update, registration_date, is_admin) VALUES (?, ?, ?, ?,NOW(), NOW(), ?)";
-  const values = [username, password, full_name, email, is_admin];
+    "INSERT INTO users (username, password, full_name, email,cellNum, last_update, registration_date, is_admin) VALUES (?, ?, ?, ?, ?,NOW(), NOW(), ?)";
+  const values = [username, password, full_name, email,cellNum, is_admin];
 
   db.query(query, values, (err, result) => {
     if (err) {

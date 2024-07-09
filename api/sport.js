@@ -27,11 +27,11 @@ router.post("/add", (req, res) => {
     last_update
   } = req.body;
 
-  const query = `INSERT INTO equipment_sport (equipment_name, Sp_quantity_in_stock, equipment_type, import_date, note,last_update) VALUES (?, ?, ?, ?, ?,?)`;
+  const query = `INSERT INTO equipment_sport (equipment_name, Sp_quantity_in_stock, equipment_type, import_date, note,last_update) VALUES (?, ?, ?,  NOW(), ?, NOW())`;
 
   db.query(
     query,
-    [equipment_name, quantity_in_stock, equipment_type, import_date, note,last_update],
+    [equipment_name, quantity_in_stock, equipment_type, note],
     (error, results) => {
       if (error) {
         console.error("Error inserting data into the database:", error);
