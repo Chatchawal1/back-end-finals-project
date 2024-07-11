@@ -19,26 +19,44 @@ router.put("/return", (req, res) => {
       return new Promise((resolve, reject) => {
         const { id, equipment_name, quantity_borrowed } = request;
 
-        const updateQueries = `
+        const updateLoanDetailsQuery = `
           UPDATE loan_details
           SET loan_status = 'คืน'
           WHERE loan_id = ?;
-
-          UPDATE equipment_recreational
-          SET Eq_quantity_in_stock = Eq_quantity_in_stock + ?
-          WHERE equipment_name = ?;
-          
-          UPDATE equipment_sport
-          SET Sp_quantity_in_stock = Sp_quantity_in_stock + ?
-          WHERE equipment_name = ?;
         `;
 
-        db.query(updateQueries, [id, quantity_borrowed, equipment_name, quantity_borrowed, equipment_name], (error, results) => {
+        db.query(updateLoanDetailsQuery, [id], (error, results) => {
           if (error) {
             reject(error);
-          } else {
-            resolve(results);
+            return;
           }
+
+          const updateRecreationalQuery = `
+            UPDATE equipment_recreational
+            SET Eq_quantity_in_stock = Eq_quantity_in_stock + ?
+            WHERE equipment_name = ?;
+          `;
+
+          db.query(updateRecreationalQuery, [quantity_borrowed, equipment_name], (error, results) => {
+            if (error) {
+              reject(error);
+              return;
+            }
+
+            const updateSportQuery = `
+              UPDATE equipment_sport
+              SET Sp_quantity_in_stock = Sp_quantity_in_stock + ?
+              WHERE equipment_name = ?;
+            `;
+
+            db.query(updateSportQuery, [quantity_borrowed, equipment_name], (error, results) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(results);
+              }
+            });
+          });
         });
       });
     });
@@ -65,7 +83,6 @@ router.put("/return", (req, res) => {
       });
   });
 });
-
 router.post("/borrow-multiple", (req, res) => {
   const { id, borrower_name, identifier_number, borrow_date, return_date, loan_status, items } = req.body;
 
