@@ -19,56 +19,27 @@ router.put("/return", (req, res) => {
       return new Promise((resolve, reject) => {
         const { id, equipment_name, quantity_borrowed } = request;
 
-        const updateLoanDetailsQuery = `
+        const updateQueries = `
           UPDATE loan_details
           SET loan_status = 'คืน'
           WHERE loan_id = ?;
+
+          UPDATE equipment_recreational
+          SET Eq_quantity_in_stock = Eq_quantity_in_stock + ?
+          WHERE equipment_name = ?;
+          
+          UPDATE equipment_sport
+          SET Sp_quantity_in_stock = Sp_quantity_in_stock + ?
+          WHERE equipment_name = ?;
         `;
 
-        db.query(
-          updateLoanDetailsQuery,
-          [id, equipment_name],
-          (error, results) => {
-            if (error) {
-              reject(error);
-              return;
-            }
-
-            if (results.affectedRows === 0) {
-              reject(
-                new Error("No active loan found or item already returned.")
-              );
-              return;
-            }
-
-            const updateStockQuery = `
-            UPDATE equipment_recreational
-            SET Eq_quantity_in_stock = Eq_quantity_in_stock + ?
-            WHERE equipment_name = ?;
-            
-            UPDATE equipment_sport
-            SET Sp_quantity_in_stock = Sp_quantity_in_stock + ?
-            WHERE equipment_name = ?;
-          `;
-
-            db.query(
-              updateStockQuery,
-              [
-                quantity_borrowed,
-                equipment_name,
-                quantity_borrowed,
-                equipment_name,
-              ],
-              (error, results) => {
-                if (error) {
-                  reject(error);
-                } else {
-                  resolve(results);
-                }
-              }
-            );
+        db.query(updateQueries, [id, quantity_borrowed, equipment_name, quantity_borrowed, equipment_name], (error, results) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(results);
           }
-        );
+        });
       });
     });
 
