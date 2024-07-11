@@ -22,7 +22,7 @@ router.put("/return", (req, res) => {
         const updateLoanDetailsQuery = `
           UPDATE loan_details
           SET loan_status = 'คืน'
-          WHERE loan_id = ? AND equipment_name = ?;
+          WHERE loan_id = ?;
         `;
 
         db.query(
