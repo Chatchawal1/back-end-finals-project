@@ -80,8 +80,6 @@ router.put("/update/:id", (req, res) => {
       }
       // Handle successful update, such as sending a response back
       res.json({ message: "Updated successfully" });
-      console.log(is_admin);
-      console.log(req.body);
     }
   );
 });
