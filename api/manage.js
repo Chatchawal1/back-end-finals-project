@@ -1,10 +1,13 @@
-// sport.js
 const express = require("express");
 const db = require("../database/db");
 const router = express.Router();
 
 router.get("/table", (req, res) => {
-  const query = "SELECT * FROM `pctdb`.loan_details";
+  const query = `
+    SELECT ld.*, li.equipment_name, li.equipment_type, li.quantity_borrowed
+    FROM loan_details ld
+    JOIN loan_items li ON ld.loan_id = li.loan_id
+  `;
 
   db.query(query, (error, results) => {
     if (error) {
@@ -15,28 +18,54 @@ router.get("/table", (req, res) => {
     res.json(results);
   });
 });
+
 router.delete("/delete/:id", (req, res) => {
   const id = req.params.id;
-  const query = "DELETE FROM loan_details WHERE ID = ?";
-
-  db.query(query, [id], (error, results) => {
-    if (error) {
-      console.error("Error deleting data from database:", error);
-      res.status(500).json({ error: "Internal Server Error" });
-      return;
+  db.beginTransaction((err) => {
+    if (err) {
+      console.error("Error starting transaction:", err);
+      return res.status(500).json({ error: "Internal Server Error" });
     }
-    res.json({ message: "Deleted successfully" });
+
+    const deleteItemsQuery = "DELETE FROM loan_items WHERE loan_id = ?";
+    db.query(deleteItemsQuery, [id], (error, results) => {
+      if (error) {
+        return db.rollback(() => {
+          console.error("Error deleting from loan_items:", error);
+          res.status(500).json({ error: "Internal Server Error" });
+        });
+      }
+
+      const deleteDetailsQuery = "DELETE FROM loan_details WHERE loan_id = ?";
+      db.query(deleteDetailsQuery, [id], (error, results) => {
+        if (error) {
+          return db.rollback(() => {
+            console.error("Error deleting from loan_details:", error);
+            res.status(500).json({ error: "Internal Server Error" });
+          });
+        }
+
+        db.commit((err) => {
+          if (err) {
+            return db.rollback(() => {
+              console.error("Error committing transaction:", err);
+              res.status(500).json({ error: "Internal Server Error" });
+            });
+          }
+          res.json({ message: "Deleted successfully" });
+        });
+      });
+    });
   });
 });
 
 router.get("/search", (req, res) => {
-  // Get the search term from query parameters
   const searchTerm = req.query.term;
-
-  // Protect against SQL injection by using parameterized queries
   const searchQuery = `
-    SELECT * FROM loan_details
-    WHERE equipment_name LIKE CONCAT('%', ?, '%');
+    SELECT ld.*, li.equipment_name, li.equipment_type, li.quantity_borrowed
+    FROM loan_details ld
+    JOIN loan_items li ON ld.loan_id = li.loan_id
+    WHERE li.equipment_name LIKE CONCAT('%', ?, '%')
   `;
 
   db.query(searchQuery, [searchTerm], (error, results) => {
@@ -49,101 +78,72 @@ router.get("/search", (req, res) => {
   });
 });
 
-
-
-
 router.put("/update/:id", (req, res) => {
   const id = req.params.id;
   const {
-    equipment_name,
-    equipment_type,
-    new_quantity_borrowed, // Changed variable name for clarity
     borrower_name,
     borrow_date,
     return_date,
     loan_status,
+    items
   } = req.body;
 
-  // Start a transaction
   db.beginTransaction((err) => {
     if (err) {
       console.error("Error starting transaction:", err);
-      res.status(500).json({ error: "Internal Server Error" });
-      return;
+      return res.status(500).json({ error: "Internal Server Error" });
     }
 
-    // Get the current details for the loan to find out the old quantity borrowed
-    const currentLoanQuery = `SELECT quantity_borrowed FROM loan_details WHERE id = ?`;
-    db.query(currentLoanQuery, [id], (error, loanResults) => {
+    const updateDetailsQuery = `
+      UPDATE loan_details
+      SET borrower_name = ?, borrow_date = ?, return_date = ?, loan_status = ?
+      WHERE loan_id = ?
+    `;
+    db.query(updateDetailsQuery, [borrower_name, borrow_date, return_date, loan_status, id], (error, results) => {
       if (error) {
         return db.rollback(() => {
-          console.error("Error fetching current loan details:", error);
+          console.error("Error updating loan_details:", error);
           res.status(500).json({ error: "Internal Server Error" });
         });
       }
 
-      const old_quantity_borrowed = loanResults[0].quantity_borrowed;
-      const difference = new_quantity_borrowed - old_quantity_borrowed;
-
-      // Update the equipment_details table
-      const updateEquipmentQuery = `
-      UPDATE equipment_recreational
-        SET Eq_quantity_in_stock = Eq_quantity_in_stock - (?)
-        WHERE equipment_name = ?
-      `;
-      db.query(updateEquipmentQuery, [difference, equipment_name], (updateError, updateResults) => {
-        if (updateError) {
-          return db.rollback(() => {
-            console.error("Error updating equipment stock:", updateError);
-            res.status(500).json({ error: "Internal Server Error" });
-          });
-        }
-
-        // Update the loan_details table
-        const updateLoanQuery = `
-          UPDATE loan_details
-          SET
-            equipment_name = ?,
-            equipment_type = ?,
-            quantity_borrowed = ?,
-            borrower_name = ?,
-            borrow_date = ?,
-            return_date = ?,
-            loan_status = ?
-          WHERE id = ?
-        `;
-        db.query(updateLoanQuery, [
-          equipment_name,
-          equipment_type,
-          new_quantity_borrowed,
-          borrower_name,
-          borrow_date,
-          return_date,
-          loan_status,
-          id
-        ], (loanError, loanResults) => {
-          if (loanError) {
-            return db.rollback(() => {
-              console.error("Error updating loan details:", loanError);
-              res.status(500).json({ error: "Internal Server Error" });
-            });
-          }
-
-          // If everything is successful, commit the transaction
-          db.commit((commitErr) => {
-            if (commitErr) {
-              return db.rollback(() => {
-                console.error("Error committing transaction:", commitErr);
-                res.status(500).json({ error: "Internal Server Error" });
-              });
+      const updateItemsPromises = items.map(item => {
+        return new Promise((resolve, reject) => {
+          const updateItemQuery = `
+            UPDATE loan_items
+            SET equipment_name = ?, equipment_type = ?, quantity_borrowed = ?
+            WHERE loan_id = ? AND item_id = ?
+          `;
+          db.query(updateItemQuery, [item.equipment_name, item.equipment_type, item.quantity_borrowed, id, item.item_id], (error, results) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(results);
             }
-            res.json({ message: "Loan updated successfully and stock adjusted" });
           });
         });
       });
+
+      Promise.all(updateItemsPromises)
+        .then(() => {
+          db.commit((err) => {
+            if (err) {
+              return db.rollback(() => {
+                console.error("Error committing transaction:", err);
+                res.status(500).json({ error: "Internal Server Error" });
+              });
+            }
+            res.json({ message: "Loan updated successfully" });
+          });
+        })
+        .catch(error => {
+          db.rollback(() => {
+            console.error("Error updating loan_items:", error);
+            res.status(500).json({ error: "Internal Server Error" });
+          });
+        });
     });
   });
 });
-
 
 module.exports = router;

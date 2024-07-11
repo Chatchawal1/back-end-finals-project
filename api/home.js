@@ -4,6 +4,24 @@ const db = require("../database/db");
 
 const router = express.Router();
 
+router.get("/returnedCount", (req, res) => {
+  const query = `
+    SELECT COUNT(DISTINCT ld.loan_id) AS returnedCount 
+    FROM loan_details ld
+    WHERE ld.loan_status = 'คืน'
+  `;
+
+  db.query(query, (error, results) => {
+    if (error) {
+      console.error("Error querying database:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+      return;
+    }
+
+    const returnedCount = results[0].returnedCount;
+    res.json({ returnedCount });
+  });
+});
 router.get("/equipmentCount", (req, res) => {
   const queryRecreational =
     "SELECT COUNT(*) as totalCount FROM equipment_recreational";
@@ -33,7 +51,8 @@ router.get("/equipmentCount", (req, res) => {
       res.json(totalCount);
     });
   });
-}); //จำนวนอุปกรณ์ที่ถูกยืม
+});
+
 router.get("/UserCount", (req, res) => {
   const query = "SELECT COUNT(*) userCount FROM users";
 
@@ -58,14 +77,15 @@ router.get("/returnedCount", (req, res) => {
       res.status(500).json({ error: "Internal Server Error" });
       return;
     }
-
-    const returnedCount = results[0].returnedCount;
-    res.json({ returnedCount });
   });
-}); //จำนวนผู้ยืมอุปกรณ์ทั้งหมด
+});
+
 router.get("/totalLend", (req, res) => {
-  const query =
-    "SELECT COUNT(*) AS totalLend FROM loan_details WHERE loan_status = 'ยืม'";
+  const query = `
+    SELECT COUNT(DISTINCT ld.loan_id) AS totalLend 
+    FROM loan_details ld
+    WHERE ld.loan_status = 'ยืม'
+  `;
 
   db.query(query, (error, results) => {
     if (error) {
@@ -77,22 +97,35 @@ router.get("/totalLend", (req, res) => {
     const totalLend = results[0].totalLend;
     res.json({ totalLend });
   });
-}); //จำนวนการยืมทั้งหมด
-
+});
 
 router.get("/management", (req, res) => {
   const query = `
-  SELECT 
-  ld.*,
-  CASE
-    WHEN es.equipment_name IS NOT NULL THEN es.Sp_quantity_in_stock
-    WHEN er.equipment_name IS NOT NULL THEN er.Eq_quantity_in_stock
-    ELSE 0
-  END AS total_stock
-FROM pctdb.loan_details ld
-LEFT JOIN pctdb.equipment_sport es ON ld.equipment_name = es.equipment_name
-LEFT JOIN pctdb.equipment_recreational er ON ld.equipment_name = er.equipment_name
-ORDER BY ld.equipment_name;
+    SELECT 
+      ld.loan_id AS id,
+      ld.borrower_name,
+      ld.borrow_date,
+      ld.return_date,
+      ld.loan_status,
+      li.item_id,
+      li.equipment_name,
+      li.equipment_type,
+      li.quantity_borrowed,
+      ld.identifier_number,  
+      CASE
+        WHEN es.equipment_name IS NOT NULL THEN es.Sp_quantity_in_stock
+        WHEN er.equipment_name IS NOT NULL THEN er.Eq_quantity_in_stock
+        ELSE 0
+      END AS total_stock,
+      (SELECT SUM(quantity_borrowed) 
+       FROM loan_items li2 
+       JOIN loan_details ld2 ON li2.loan_id = ld2.loan_id 
+       WHERE li2.equipment_name = li.equipment_name) AS quantity_data
+    FROM loan_details ld
+    JOIN loan_items li ON ld.loan_id = li.loan_id
+    LEFT JOIN equipment_sport es ON li.equipment_name = es.equipment_name
+    LEFT JOIN equipment_recreational er ON li.equipment_name = er.equipment_name
+    ORDER BY ld.loan_id, li.equipment_name
   `;
 
   db.query(query, (error, results) => {
@@ -105,31 +138,25 @@ ORDER BY ld.equipment_name;
   });
 });
 
-
 router.get("/eqloan", (req, res) => {
   const query = `
-  SELECT 
-    es.equipment_name AS equipment_name, 
-    'อุปกรณ์กีฬา' AS equipment_type, 
-    MAX(es.Sp_quantity_in_stock) AS max_quantity_in_stock,
-    SUM(CASE WHEN ld.loan_status = 'ยืม' THEN ld.quantity_borrowed ELSE 0 END) AS total_quantity_borrowed,
-    MAX(es.Sp_quantity_in_stock) > 0 AS is_available
-  FROM equipment_sport es
-  LEFT JOIN loan_details ld ON es.equipment_name = ld.equipment_name AND ld.loan_status = 'ยืม'
-  GROUP BY es.equipment_name
-
-  UNION
-  
-  SELECT 
-    er.equipment_name AS equipment_name, 
-    'อุปกรณ์นันทนาการ' AS equipment_type, 
-    MAX(er.Eq_quantity_in_stock) AS max_quantity_in_stock,
-    SUM(CASE WHEN ld.loan_status = 'ยืม' THEN ld.quantity_borrowed ELSE 0 END) AS total_quantity_borrowed,
-    MAX(er.Eq_quantity_in_stock) > 0 AS is_available
-  FROM equipment_recreational er
-  LEFT JOIN loan_details ld ON er.equipment_name = ld.equipment_name AND ld.loan_status = 'ยืม'
-  GROUP BY er.equipment_name;
-`;
+    SELECT 
+      e.equipment_name,
+      e.equipment_type,
+      e.max_quantity_in_stock,
+      COALESCE(SUM(CASE WHEN ld.loan_status = 'ยืม' THEN li.quantity_borrowed ELSE 0 END), 0) AS total_quantity_borrowed,
+      e.max_quantity_in_stock > 0 AS is_available
+    FROM (
+      SELECT equipment_name, 'อุปกรณ์กีฬา' AS equipment_type, Sp_quantity_in_stock AS max_quantity_in_stock
+      FROM equipment_sport
+      UNION ALL
+      SELECT equipment_name, 'อุปกรณ์นันทนาการ' AS equipment_type, Eq_quantity_in_stock AS max_quantity_in_stock
+      FROM equipment_recreational
+    ) e
+    LEFT JOIN loan_items li ON e.equipment_name = li.equipment_name
+    LEFT JOIN loan_details ld ON li.loan_id = ld.loan_id AND ld.loan_status = 'ยืม'
+    GROUP BY e.equipment_name, e.equipment_type, e.max_quantity_in_stock
+  `;
 
   db.query(query, (error, results) => {
     if (error) {
@@ -140,8 +167,5 @@ router.get("/eqloan", (req, res) => {
     }
   });
 });
-
-
-
 
 module.exports = router;
